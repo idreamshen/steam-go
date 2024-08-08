@@ -77,11 +77,11 @@ type NumberOfCurrentPlayersResponse struct {
 }
 
 // Gets the complete list of stats and achievements for the specified game.
-func (c Client) GetSchemaForGame(appID int) (schema SchemaForGame, err error) {
+func (c Client) GetSchemaForGame(appID int, language LanguageCode) (schema SchemaForGame, err error) {
 
 	options := url.Values{}
 	options.Set("appid", strconv.Itoa(appID))
-	options.Set("l", "english")
+	options.Set("l", string(language))
 
 	b, err := c.getFromAPI("ISteamUserStats/GetSchemaForGame/v2", options, true)
 	if err != nil {
