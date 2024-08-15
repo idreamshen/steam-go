@@ -2,6 +2,7 @@ package steamapi
 
 import (
 	"bytes"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -44,6 +45,7 @@ type Client struct {
 	storeBucket     *ratelimit.Bucket
 	communityBucket *ratelimit.Bucket
 	timeout         time.Duration
+	httpProxy       *url.URL
 }
 
 func (c *Client) SetKey(key string) {
@@ -72,6 +74,10 @@ func (c *Client) SetStoreRateLimit(duration time.Duration, burst int64) {
 
 func (c *Client) SetCommunityRateLimit(duration time.Duration, burst int64) {
 	c.communityBucket = ratelimit.NewBucket(duration, burst)
+}
+
+func (c *Client) SetHttpProxy(httpProxy *url.URL) {
+	c.httpProxy = httpProxy
 }
 
 func (c Client) getFromAPI(path string, query url.Values, key bool) (b []byte, err error) {
@@ -139,6 +145,13 @@ func (c Client) get(path string) (b []byte, code int, url string, err error) {
 
 	client := &http.Client{
 		Timeout: c.timeout,
+	}
+
+	if c.httpProxy != nil {
+		client.Transport = &http.Transport{
+			Proxy:           http.ProxyURL(c.httpProxy),
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
 	}
 
 	req, err := http.NewRequest("GET", path, nil)
