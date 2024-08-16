@@ -31,6 +31,7 @@ var (
 
 func NewClient() *Client {
 	c := &Client{}
+	c.httpClient = &http.Client{}
 	c.SetLogger(DefaultLogger{})
 	c.SetUserAgent("github.com/Jleagle/steam-go")
 	c.SetTimeout(time.Second * 5)
@@ -46,6 +47,7 @@ type Client struct {
 	communityBucket *ratelimit.Bucket
 	timeout         time.Duration
 	httpProxy       *url.URL
+	httpClient      *http.Client
 }
 
 func (c *Client) SetKey(key string) {
@@ -54,6 +56,7 @@ func (c *Client) SetKey(key string) {
 
 func (c *Client) SetTimeout(timeout time.Duration) {
 	c.timeout = timeout
+	c.httpClient.Timeout = c.timeout
 }
 
 func (c *Client) SetLogger(logger logger) {
@@ -78,6 +81,10 @@ func (c *Client) SetCommunityRateLimit(duration time.Duration, burst int64) {
 
 func (c *Client) SetHttpProxy(httpProxy *url.URL) {
 	c.httpProxy = httpProxy
+	c.httpClient.Transport = &http.Transport{
+		Proxy:           http.ProxyURL(c.httpProxy),
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
 }
 
 func (c Client) getFromAPI(path string, query url.Values, key bool) (b []byte, err error) {
@@ -143,17 +150,6 @@ func (c Client) getFromCommunity(path string, query url.Values) (b []byte, url s
 
 func (c Client) get(path string) (b []byte, code int, url string, err error) {
 
-	client := &http.Client{
-		Timeout: c.timeout,
-	}
-
-	if c.httpProxy != nil {
-		client.Transport = &http.Transport{
-			Proxy:           http.ProxyURL(c.httpProxy),
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
-	}
-
 	req, err := http.NewRequest("GET", path, nil)
 	if err != nil {
 		return b, code, url, err
@@ -161,7 +157,7 @@ func (c Client) get(path string) (b []byte, code int, url string, err error) {
 
 	req.Header.Set("User-Agent", c.userAgent)
 
-	response, err := client.Do(req)
+	response, err := c.httpClient.Do(req)
 	if err != nil {
 		return b, code, url, err
 	}
