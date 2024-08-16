@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -82,8 +83,19 @@ func (c *Client) SetCommunityRateLimit(duration time.Duration, burst int64) {
 func (c *Client) SetHttpProxy(httpProxy *url.URL) {
 	c.httpProxy = httpProxy
 	c.httpClient.Transport = &http.Transport{
-		Proxy:           http.ProxyURL(c.httpProxy),
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		Proxy: http.ProxyURL(c.httpProxy),
+		DialContext: (&net.Dialer{
+			Timeout:   5 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          40,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+		MaxConnsPerHost:       50,
+		MaxIdleConnsPerHost:   20,
 	}
 }
 
