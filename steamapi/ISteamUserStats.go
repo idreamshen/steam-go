@@ -55,7 +55,7 @@ func (c Client) GetNumberOfCurrentPlayers(appID int) (players int, err error) {
 	options := url.Values{}
 	options.Set("appid", strconv.Itoa(appID))
 
-	b, err := c.getFromAPI("ISteamUserStats/GetNumberOfCurrentPlayers/v1", options, false)
+	b, err := c.getFromAPI("ISteamUserStats/GetNumberOfCurrentPlayers/v1", options, true)
 	if err != nil {
 		return players, err
 	}
